@@ -48,9 +48,9 @@ int p_y_state = 0;
 void setup()
 
 {
-
   //Inicialización de la comunicación Serial
   Serial.begin(9600);
+  Serial1.begin(9600);
 
   //Inicialización de la comunicación con el LCD
   lcd.init();                                                        
@@ -59,82 +59,38 @@ void setup()
 
   //Se prende la luz de fondo del LCD
   lcd.backlight();                                              
-
 }
 
- 
 
-void loop()
-
-{
-  //Si la comunicación con otro disposivio se establece...
-  if (Serial.available()>0)
-  {
-
-  //Se lee el string recibido
-  text = Serial.readString();
-  //Serial.println(text); //(solo usar para debug)
-   
-  }
-
-  // Se actualiza la longitud del string
-  str_len = text.length();
-  // Desde la posición 15 del string (Separa Aceleraciones de Giros) hasta el final del string
-  for (int i=15; i <= str_len; i++){
-    //Serial.println(String(p_pos)+" "+String(y_pos)); //(solo usar para debug)
-    //Si se encuentra el separador roll_pitch"
-    if(text.substring(i,i+1)==":"){
-      if(p_y_state==0){
-        //Se actualiza el p_pos y se va ahora a buscar el y_pos
-        p_pos =i+1;
-        p_y_state=1;
-      }
-      else
-      {
-        //Se actualiza el y_pos y se regresa a buscar el p_pos para el siguiente string 
-        y_pos = i+1;
-        p_y_state=0;
-      }
+void splitString(String s, char delimiter, float* values) {
+    int i = 0;
+    int pos = s.indexOf(delimiter);
+    while (pos != -1) {
+        values[i++] = s.substring(0, pos).toFloat();
+        s = s.substring(pos + 1);
+        pos = s.indexOf(delimiter);
     }
-    
-  }
-  //Se substraen los valores de las aceleraciones y giros para convertirlos en Floats
-  Acx = text.substring(0,5).toFloat();
-  Acy = text.substring(5,10).toFloat();
-  Acz = text.substring(10,15).toFloat();
-  roll = text.substring(15,p_pos).toFloat();
-  pitch = text.substring(p_pos,y_pos).toFloat();
-  yaw = text.substring(y_pos).toFloat();
+    values[i] = s.toFloat(); // Para el último elemento después del último delimitador
+}
 
-  //Primera Fila, se muestran leyenda de Aceleraciones
-  lcd.setCursor(1,0); 
-  lcd.print("Accx Accy Accz");
-  //Segunda Fila, se muestran valores de Aceleraciones
-  lcd.setCursor(1,1);   
-  lcd.print(String(Acx));
-  lcd.setCursor(6,1);   
-  lcd.print(String(Acy));
-  lcd.setCursor(11,1);   
-  lcd.print(String(Acz));
-
-  //Delay de 2 segundos
-  delay(2000);
-  //Se borra el texto del LCD
-  lcd.clear();
-  //Primera Fila, se muestra leyenda de Giros
-  lcd.setCursor(2,0); 
-  lcd.print("G_x G_y G_z");
-  //Segunda Fila, se muestran valores de Giros
-  lcd.setCursor(2,1);   
-  lcd.print(String(roll));
-  lcd.setCursor(6,1);   
-  lcd.print(String(pitch));
-  lcd.setCursor(10,1);   
-  lcd.print(String(yaw));
-  //Delay 2 segundos
-  delay(2000);
-  //Borrar LCD
-  lcd.clear();
-                                    
-
+void loop() {
+    if (Serial1.available()) {
+        String dataString = Serial1.readStringUntil('\n');
+        float values[6]; // ax, ay, az, gx, gy, gz
+        splitString(dataString, ':', values);
+        
+        // Actualizar LCD con valores
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("AccX AccY AccZ");
+        lcd.setCursor(0, 1);
+        lcd.print(String(values[0], 2) + " " + String(values[1], 2) + " " + String(values[2], 2));
+        delay(1500);
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("GyrX GyrY GyrZ");
+        lcd.setCursor(0, 1);
+        lcd.print(String(values[3], 2) + " " + String(values[4], 2) + " " + String(values[5], 2));
+        delay(1500);
+    }
 }

@@ -8,26 +8,42 @@
   Versión 1.0 - 29/04/2024
 */
 
-//Inclusión de librerías 
-#include <Wire.h>  
+#include <I2Cdev.h>
+#include <MPU6050.h>
+#include <Wire.h>
 
-#include "MPU6050.h"
-//Inicialización comunicación I2C para IMU
-//MPU6050 name(dirección de dispsitivo)
-MPU6050 accelgyro(0X68); //0x68 es la dirección estándar para este dispositivo
+MPU6050 sensor;
 
- //declare variables
- float ax, ay, az;
- float gx, gy, gz;
- float temp;
- float temp_MPU;
+int ax, ay, az;
+int gx, gy, gz;
 
 void setup() {
-  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Serial1.begin(9600);    // Cambiado para coincidir con la velocidad del receptor
+  Wire.begin();          
+  sensor.initialize();
 
+  if (sensor.testConnection()) Serial.println("Sensor iniciado correctamente");
+  else Serial.println("Error al iniciar el sensor");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+   sensor.getAcceleration(&ax, &ay, &az);
+  sensor.getRotation(&gx, &gy, &gz);
+  float ax_m_s2 = ax * (9.81/16384.0);
+  float ay_m_s2 = ay * (9.81/16384.0);
+  float az_m_s2 = az * (9.81/16384.0);
+  float gx_deg_s = gx * (250.0/32768.0);
+  float gy_deg_s = gy * (250.0/32768.0);
+  float gz_deg_s = gz * (250.0/32768.0);
 
+  // Formatear los datos como una cadena delimitada por dos puntos
+  String dataString = String(ax_m_s2, 2) + ":" + String(ay_m_s2, 2) + ":" + String(az_m_s2, 2) + ":" +
+                      String(gx_deg_s, 2) + ":" + String(gy_deg_s, 2) + ":" + String(gz_deg_s, 2);
+
+  Serial.println(dataString);
+  Serial1.println(dataString);  // Enviar la cadena formateada al otro Arduino
+
+  delay(2000); // Ajustar según sea necesario para la velocidad de transmisión deseada
 }
+
